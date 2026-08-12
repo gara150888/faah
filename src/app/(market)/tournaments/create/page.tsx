@@ -18,7 +18,6 @@ import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
 import { createTournamentSchema, modeRules, type CreateTournamentInput } from "~/schema/tournament.schema";
 import { api } from "~/trpc/react";
-import { z } from "zod";
 
 function formatDateTime(dateTime?: string | Date) {
   if (!dateTime) return "N/A";
@@ -68,7 +67,7 @@ export default function CreateTournamentPage() {
   const mutation = api.tournament.create.useMutation({
     onSuccess: () => {
       toast.success("Tournament created successfully!");
-      router.push("/dashboard");
+      router.push("/tournaments");
     },
     onError: (err) => {
       toast.error(err.message || "Failed to create tournament");

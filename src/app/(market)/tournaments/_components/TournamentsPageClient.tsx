@@ -1,12 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { Search, RefreshCw, Bell, ChevronDown, Calendar, Users, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
-import { Input } from "~/components/ui/input"
+import { MoreHorizontal, RefreshCw, Search } from "lucide-react"
+import { useEffect, useState } from "react"
 import { Button } from "~/components/ui/button"
-import { Badge } from "~/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
+import { Input } from "~/components/ui/input"
 import {
   Pagination,
   PaginationContent,
@@ -15,6 +12,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "~/components/ui/pagination"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "~/components/ui/select"
+import { Spinner } from "~/components/ui/spinner"
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
+import { cn } from "~/lib/utils"
+import { api } from "~/trpc/react"
 import TournamentCard from "./TournamentCard"
 
 export type Tournament = {
@@ -31,98 +33,139 @@ export type Tournament = {
   maxTeams: number
 }
 
+const formatDate = (date: Date | string) => {
+  const d = new Date(date);
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
 
-const tournaments: Tournament[] = [
-  {
-    id: "1",
-    title: "BGMI Pro League Season 1",
-    game: "BGMI",
-    image: "bg-[#1a1a2e]",
-    status: "UPCOMING",
-    mode: "Squad",
-    teamSize: 4,
-    regEnd: "15 May 2025, 11:59 PM",
-    startDate: "18 May 2025, 06:00 PM",
-    teamsCount: 32,
-    maxTeams: 64,
-  },
-  {
-    id: "2",
-    title: "Free Fire Duel Cup",
-    game: "Free Fire",
-    image: "bg-gradient-to-r from-purple-600 to-indigo-600",
-    status: "UPCOMING",
-    mode: "Duo",
-    teamSize: 2,
-    regEnd: "12 May 2025, 11:59 PM",
-    startDate: "15 May 2025, 05:00 PM",
-    teamsCount: 24,
-    maxTeams: 48,
-  },
-  {
-    id: "3",
-    title: "COD Mobile Championship",
-    game: "COD Mobile",
-    image: "bg-[#2d2d2d]",
-    status: "ONGOING",
-    mode: "Squad",
-    teamSize: 5,
-    regEnd: "05 May 2025, 11:59 PM",
-    startDate: "08 May 2025, 06:00 PM",
-    teamsCount: 40,
-    maxTeams: 64,
-  },
-  {
-    id: "4",
-    title: "Valorant Clash Series",
-    game: "Valorant",
-    image: "bg-gradient-to-r from-red-900 to-black",
-    status: "UPCOMING",
-    mode: "5v5",
-    teamSize: 5,
-    regEnd: "20 May 2025, 11:59 PM",
-    startDate: "22 May 2025, 07:00 PM",
-    teamsCount: 16,
-    maxTeams: 32,
-  },
-  {
-    id: "5",
-    title: "PUBG Solo Showdown",
-    game: "PUBG PC",
-    image: "bg-gradient-to-r from-yellow-600 to-orange-700",
-    status: "UPCOMING",
-    mode: "Solo",
-    teamSize: 1,
-    regEnd: "17 May 2025, 11:59 PM",
-    startDate: "19 May 2025, 08:00 PM",
-    teamsCount: 50,
-    maxTeams: 100,
-  },
-  {
-    id: "6",
-    title: "Apex Legends Arena",
-    game: "Apex Legends",
-    image: "bg-[#1a1a1a]",
-    status: "COMPLETED",
-    mode: "Squad",
-    teamSize: 3,
-    regEnd: "02 May 2025, 11:59 PM",
-    startDate: "04 May 2025, 06:00 PM",
-    teamsCount: 64,
-    maxTeams: 64,
-  },
-]
+const mapTournament = (t: any): Tournament => {
+  return {
+    id: t.id,
+    title: t.name,
+    game: t.gameName,
+    image: t.banner || "bg-gradient-to-r from-purple-600 to-indigo-600",
+    status: (t.status === "cancelled" ? "COMPLETED" : t.status.toUpperCase()) as "UPCOMING" | "ONGOING" | "COMPLETED",
+    mode: t.mode.charAt(0).toUpperCase() + t.mode.slice(1),
+    teamSize: t.teamSize,
+    regEnd: formatDate(t.registrationEnd),
+    startDate: formatDate(t.startDate),
+    teamsCount: t.teamsCount ?? 0,
+    maxTeams: t.maxTeams,
+  };
+};
 
 export default function TournamentsPageClient() {
-  const [activeTab, setActiveTab] = useState("all")
+  const getGameLabel = (val: string) => {
+    switch (val) {
+      case "all": return "All Games";
+      case "bgmi": return "BGMI";
+      case "freefire": return "Free Fire";
+      case "cod": return "COD Mobile";
+      default: return val;
+    }
+  };
 
-  const filteredTournaments = activeTab === "all"
-    ? tournaments
-    : tournaments.filter((t) => t.status.toLowerCase() === activeTab)
+  const getModeLabel = (val: string) => {
+    switch (val) {
+      case "all": return "All Modes";
+      case "squad": return "Squad";
+      case "duo": return "Duo";
+      case "solo": return "Solo";
+      default: return val;
+    }
+  };
+
+  const getSortLabel = (val: string) => {
+    switch (val) {
+      case "latest": return "Latest First";
+      case "oldest": return "Oldest First";
+      default: return val;
+    }
+  };
+
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedGame, setSelectedGame] = useState("all");
+  const [selectedMode, setSelectedMode] = useState("all");
+  const [status, setStatus] = useState<"all" | "upcoming" | "ongoing" | "completed" | "cancelled">("all");
+  const [sortOrder, setSortOrder] = useState<"latest" | "oldest">("latest");
+  const [page, setPage] = useState(1);
+
+  // Debounce search input to avoid querying on every keystroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  const { data, isLoading, isFetching, isError, refetch } = api.tournament.getAll.useQuery(
+    {
+      search: debouncedSearch || undefined,
+      status: status !== "all" ? status : undefined,
+      gameName: selectedGame !== "all" ? selectedGame : undefined,
+      mode: selectedMode !== "all" ? (selectedMode as any) : undefined,
+      sort: sortOrder,
+      page,
+      limit: 6,
+    },
+    {
+      placeholderData: (previousData) => previousData,
+    }
+  );
+
+  const handleStatusChange = (val: string) => {
+    setStatus(val as any);
+    setPage(1);
+  };
+
+  const totalPages = data?.totalPages ?? 1;
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+
+      if (page > 3) {
+        pages.push("ellipsis");
+      }
+
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+
+      for (let i = start; i <= end; i++) {
+        if (i !== 1 && i !== totalPages) {
+          pages.push(i);
+        }
+      }
+
+      if (page < totalPages - 2) {
+        pages.push("ellipsis");
+      }
+
+      if (totalPages > 1) {
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
 
   return (
     <div className="w-full px-4">
-      {/* <div className="mx-auto max-w-7xl px-4 py-8"> */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Tournaments</h1>
@@ -138,11 +181,13 @@ export default function TournamentsPageClient() {
           <Input
             placeholder="Search tournaments, games..."
             className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select>
+        <Select value={selectedGame} onValueChange={(val) => { setSelectedGame(val || "all"); setPage(1); }}>
           <SelectTrigger className="w-35">
-            <SelectValue placeholder="All Games" />
+            {getGameLabel(selectedGame)}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Games</SelectItem>
@@ -151,9 +196,9 @@ export default function TournamentsPageClient() {
             <SelectItem value="cod">COD Mobile</SelectItem>
           </SelectContent>
         </Select>
-        <Select>
+        <Select value={selectedMode} onValueChange={(val) => { setSelectedMode(val || "all"); setPage(1); }}>
           <SelectTrigger className="w-35">
-            <SelectValue placeholder="All Modes" />
+            {getModeLabel(selectedMode)}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Modes</SelectItem>
@@ -162,25 +207,14 @@ export default function TournamentsPageClient() {
             <SelectItem value="solo">Solo</SelectItem>
           </SelectContent>
         </Select>
-        <Select>
-          <SelectTrigger className="w-35">
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="upcoming">Upcoming</SelectItem>
-            <SelectItem value="ongoing">Ongoing</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2" onClick={() => refetch()}>
           <RefreshCw className="size-4" />
           Refresh
         </Button>
       </div>
 
       <div className="mb-6 flex items-center justify-between">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={status} onValueChange={(val) => handleStatusChange(val || "all")}>
           <TabsList variant="default">
             <TabsTrigger value="all">All Tournaments</TabsTrigger>
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
@@ -188,9 +222,9 @@ export default function TournamentsPageClient() {
             <TabsTrigger value="completed">Completed</TabsTrigger>
           </TabsList>
         </Tabs>
-        <Select>
+        <Select value={sortOrder} onValueChange={(val) => { setSortOrder((val || "latest") as any); setPage(1); }}>
           <SelectTrigger className="w-35">
-            <SelectValue placeholder="Latest First" />
+            {getSortLabel(sortOrder)}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="latest">Latest First</SelectItem>
@@ -199,37 +233,108 @@ export default function TournamentsPageClient() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTournaments.map((tournament) => (
-          <TournamentCard key={tournament.id} tournament={tournament} />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex flex-col rounded-2xl bg-card ring-1 ring-foreground/10 overflow-hidden animate-pulse h-80">
+              <div className="h-40 bg-muted" />
+              <div className="flex-1 space-y-4 p-4">
+                <div className="h-4 w-1/3 bg-muted rounded" />
+                <div className="h-6 w-3/4 bg-muted rounded" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded" />
+                  <div className="h-4 w-5/6 bg-muted rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-destructive font-medium">Failed to load tournaments.</p>
+          <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+            Try Again
+          </Button>
+        </div>
+      ) : data?.tournaments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center bg-card ring-1 ring-foreground/10 rounded-2xl p-8">
+          <p className="text-muted-foreground text-sm">No tournaments found matching the filters.</p>
+        </div>
+      ) : (
+        <div className="relative min-h-[300px]">
+          {isFetching && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-background/10 backdrop-blur-xs rounded-2xl">
+              <div className="flex items-center gap-2 bg-card px-4 py-2.5 rounded-2xl shadow-lg ring-1 ring-foreground/5 border border-foreground/5">
+                <Spinner className="size-4 text-primary" />
+                <span className="text-xs text-muted-foreground font-medium">Loading...</span>
+              </div>
+            </div>
+          )}
+          <div className={cn("grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 transition-opacity duration-200", isFetching && "opacity-40 pointer-events-none")}>
+            {data?.tournaments.map((t) => (
+              <TournamentCard key={t.id} tournament={mapTournament(t)} />
+            ))}
+          </div>
+        </div>
+      )}
 
-      <div className="mt-8">
-        <Pagination>
-          <PaginationContent>
-            <PaginationPrevious href="#" />
-            <PaginationItem>
-              <PaginationLink href="#" isActive>1</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationLink href="#">2</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationLink href="#">3</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <span className="flex size-9 items-center justify-center text-muted-foreground">
-                <MoreHorizontal className="size-4" />
-              </span>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationLink href="#">10</PaginationLink>
-            </PaginationItem>
-            <PaginationNext href="#" />
-          </PaginationContent>
-        </Pagination>
-      </div>
+      {data && totalPages > 1 && (
+        <div className="mt-8">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page > 1) setPage(page - 1);
+                  }}
+                  className={page <= 1 ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+
+              {getPageNumbers().map((pageNum, index) => {
+                if (pageNum === "ellipsis") {
+                  return (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <span className="flex size-9 items-center justify-center text-muted-foreground">
+                        <MoreHorizontal className="size-4" />
+                      </span>
+                    </PaginationItem>
+                  );
+                }
+
+                const p = pageNum as number;
+                return (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      href="#"
+                      isActive={page === p}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setPage(p);
+                      }}
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page < totalPages) setPage(page + 1);
+                  }}
+                  className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   )
 }

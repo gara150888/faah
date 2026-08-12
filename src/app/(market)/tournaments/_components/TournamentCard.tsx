@@ -15,9 +15,13 @@ const statusStyles: Record<string, string> = {
 }
 
 export default function TournamentCard({ tournament }: TournamentCardProps) {
+  const isUrl = tournament.image.startsWith("http") || tournament.image.startsWith("/") || tournament.image.includes(".");
   return (
     <div className="flex flex-col rounded-2xl bg-card ring-1 ring-foreground/10 overflow-hidden">
-      <div className={`relative h-40 w-full ${tournament.image}`}>
+      <div
+        className={`relative h-40 w-full ${!isUrl ? tournament.image : ""}`}
+        style={isUrl ? { backgroundImage: `url(${tournament.image})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+      >
         <Badge
           variant="default"
           className={`absolute left-3 top-3 ${statusStyles[tournament.status] || statusStyles.UPCOMING}`}

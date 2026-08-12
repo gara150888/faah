@@ -1,8 +1,8 @@
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and, ilike, or, desc, asc, sql } from "drizzle-orm";
 
 import type { CreateTournamentInput } from "~/schema/tournament.schema";
 import { db } from "~/server/db";
-import { tournament } from "~/server/db/schema";
+import { tournament, team } from "~/server/db/schema";
 
 import { ServiceError } from "./service-error";
 
@@ -19,16 +19,11 @@ export class TournamentService {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  private static getModeRules(
-    mode: "solo" | "duo" | "squad",
-  ) {
+  private static getModeRules(mode: "solo" | "duo" | "squad") {
     return MODE_RULES[mode];
   }
 
-  private static async getTournament(
-    tx: Transaction,
-    tournamentId: string,
-  ) {
+  private static async getTournament(tx: Transaction, tournamentId: string) {
     const [result] = await tx
       .select()
       .from(tournament)
@@ -54,9 +49,9 @@ export class TournamentService {
     }
   }
 
-  private static stripPassword<
-    T extends typeof tournament.$inferSelect,
-  >(row: T) {
+  private static stripPassword<T extends typeof tournament.$inferSelect>(
+    row: T,
+  ) {
     const { password, ...rest } = row;
     return {
       ...rest,
@@ -68,10 +63,7 @@ export class TournamentService {
   // Create Tournament
   // ---------------------------------------------------------------------------
 
-  static async create(
-    input: CreateTournamentInput,
-    organizerId: string,
-  ) {
+  static async create(input: CreateTournamentInput, organizerId: string) {
     const rules = this.getModeRules(input.mode);
 
     const [newTournament] = await db
@@ -110,26 +102,104 @@ export class TournamentService {
   // Queries
   // ---------------------------------------------------------------------------
 
-  static async getAll(filters?: {
-    status?: "upcoming" | "ongoing" | "completed" | "cancelled";
+  static async getAll(filters: {
+    status?: "all" | "upcoming" | "ongoing" | "completed" | "cancelled";
     search?: string;
-  }) {
+    gameName?: string;
+    mode?: "all" | "solo" | "duo" | "squad";
+    sort?: "latest" | "oldest";
+    page?: number;
+    limit?: number;
+  } = {}) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 6;
+    const offset = (page - 1) * limit;
+
     const conditions = [];
 
-    if (filters?.status) {
+    if (filters.status && filters.status !== "all") {
       conditions.push(eq(tournament.status, filters.status));
     }
 
-    if (filters?.search) {
-      conditions.push(ilike(tournament.name, `%${filters.search}%`));
+    if (filters.mode && filters.mode !== "all") {
+      conditions.push(eq(tournament.mode, filters.mode));
     }
 
-    const results = await db
-      .select()
+    if (filters.gameName && filters.gameName !== "all") {
+      let gameSearch = filters.gameName;
+      if (gameSearch === "bgmi") gameSearch = "BGMI";
+      if (gameSearch === "freefire") gameSearch = "Free Fire";
+      if (gameSearch === "cod") gameSearch = "COD Mobile";
+      conditions.push(ilike(tournament.gameName, `%${gameSearch}%`));
+    }
+
+    if (filters.search) {
+      conditions.push(
+        or(
+          ilike(tournament.name, `%${filters.search}%`),
+          ilike(tournament.gameName, `%${filters.search}%`)
+        )
+      );
+    }
+
+    // Count query for pagination totals
+    const [countResult] = await db
+      .select({
+        count: sql<number>`cast(count(${tournament.id}) as integer)`,
+      })
       .from(tournament)
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-    return results.map((row) => this.stripPassword(row));
+    const total = countResult?.count ?? 0;
+    const totalPages = Math.ceil(total / limit);
+
+    // Fetch tournaments with left join to get team count
+    const results = await db
+      .select({
+        id: tournament.id,
+        organizerId: tournament.organizerId,
+        name: tournament.name,
+        description: tournament.description,
+        gameName: tournament.gameName,
+        mode: tournament.mode,
+        maxTeams: tournament.maxTeams,
+        maxPlayers: tournament.maxPlayers,
+        teamSize: tournament.teamSize,
+        visibility: tournament.visibility,
+        password: tournament.password,
+        status: tournament.status,
+        startDate: tournament.startDate,
+        endDate: tournament.endDate,
+        registrationStart: tournament.registrationStart,
+        registrationEnd: tournament.registrationEnd,
+        banner: tournament.banner,
+        createdAt: tournament.createdAt,
+        updatedAt: tournament.updatedAt,
+        teamsCount: sql<number>`cast(count(${team.id}) as integer)`,
+      })
+      .from(tournament)
+      .leftJoin(team, eq(team.tournamentId, tournament.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(tournament.id)
+      .orderBy(filters.sort === "oldest" ? asc(tournament.createdAt) : desc(tournament.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const tournaments = results.map((row) => {
+      const { password, ...rest } = row;
+      return {
+        ...rest,
+        hasPassword: !!password,
+      };
+    });
+
+    return {
+      tournaments,
+      total,
+      totalPages,
+      page,
+      limit,
+    };
   }
 
   static async getById(id: string) {

@@ -30,13 +30,18 @@ export const tournamentRouter = createTRPCRouter({
     .input(
       z
         .object({
-          status: tournamentStatusSchema.optional(),
+          status: z.enum(["all", "upcoming", "ongoing", "completed", "cancelled"]).optional(),
           search: z.string().optional(),
+          gameName: z.string().optional(),
+          mode: z.enum(["all", "solo", "duo", "squad"]).optional(),
+          sort: z.enum(["latest", "oldest"]).optional(),
+          page: z.number().int().positive().optional(),
+          limit: z.number().int().positive().optional(),
         })
         .optional(),
     )
     .query(async ({ input }) => {
-      return TournamentService.getAll(input);
+      return TournamentService.getAll(input ?? {});
     }),
 
   getById: publicProcedure
