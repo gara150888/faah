@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+
 import Link from "next/link"
 
 import {
@@ -29,18 +31,21 @@ export function NavMain({
     url: string
     icon?: React.ReactNode
     isActive?: boolean
+    isExpanded: boolean
     items?: {
       title: string
       url: string
     }[]
   }[]
 }) {
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
 
-        {items.filter((item) => item.title !== "Settings" && item.title !== "Profile").map((item) => (
+        {items.filter((item) => !item.isExpanded).map((item) => (
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton render={
               <Link prefetch={true} href={item.url} className="flex items-center gap-2 text-sm text-sidebar-foreground">
@@ -50,7 +55,7 @@ export function NavMain({
           </SidebarMenuItem>
         ))}
 
-        {items.filter((item) => item.title === "Settings" || item.title === "Profile").map((item) => (
+        {items.filter((item) => item.isExpanded).map((item) => (
           <Collapsible
             key={item.title}
             defaultOpen={item.isActive}

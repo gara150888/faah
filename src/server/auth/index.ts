@@ -24,15 +24,6 @@ export const auth = betterAuth({
       maxAge: 5 * 60, // Cache duration in seconds
     },
   },
-  user: {
-    additionalFields: {
-      isPremium: {
-        type: "boolean",
-        required: false,
-        defaultValue: false,
-      },
-    },
-  },
   rateLimit: {
     window: 60, // time window in seconds
     max: 5, // max requests in the window

@@ -1,7 +1,7 @@
 "use client";
-import { NavMain, NavUser, TeamSwitcher } from "~/components/sidebar";
 import type { User } from "better-auth";
 import type { ComponentProps } from "react";
+import { NavMain, NavUser, TeamSwitcher } from "~/components/sidebar";
 
 import {
   Sidebar,
@@ -11,44 +11,26 @@ import {
   SidebarRail,
 } from "~/components/ui/sidebar";
 
-import {
-  FrameIcon,
-  MapIcon,
-  PieChartIcon,
-  Settings2Icon,
-  TerminalSquareIcon,
-  UserIcon,
-  WorkflowIcon
-} from "lucide-react";
+import { FrameIcon, MapIcon, PieChartIcon, Settings2Icon, Trophy, UserIcon } from "lucide-react";
 
 const data = {
   navMain: [
     {
-      title: "Playground",
-      url: "/dashboard",
-      icon: <TerminalSquareIcon />,
+      title: "Tournaments",
+      url: "/tournaments",
+      icon: <Trophy />,
+      isExpanded: true,
       isActive: true,
       items: [
-        { title: "History", url: "#" },
-        { title: "Starred", url: "#" },
-        { title: "Settings", url: "#" },
-      ],
-    },
-    {
-      title: "WorkFlows",
-      url: "/workflows",
-      icon: <WorkflowIcon />,
-      isActive: false,
-      items: [
-        { title: "History", url: "#" },
-        { title: "Starred", url: "#" },
-        { title: "Settings", url: "#" },
+        { title: "View All", url: "/tournaments" },
+        { title: "Create Tournament", url: "/tournaments/create" },
       ],
     },
     {
       title: "Profile",
       url: "/profile",
       icon: <UserIcon />,
+      isExpanded: true,
       items: [
         { title: "Overview", url: "/profile" },
         { title: "Edit Profile", url: "/profile/edit" },
@@ -58,6 +40,7 @@ const data = {
       title: "Settings",
       url: "#",
       icon: <Settings2Icon />,
+      isExpanded: true,
       items: [
         { title: "General", url: "#" },
         { title: "Account", url: "#" },
