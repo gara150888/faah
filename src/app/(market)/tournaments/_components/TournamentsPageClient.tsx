@@ -24,7 +24,7 @@ export type Tournament = {
   title: string
   game: string
   image: string
-  status: "UPCOMING" | "ONGOING" | "COMPLETED"
+  status: "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED"
   mode: string
   teamSize: number
   regEnd: string
@@ -51,7 +51,7 @@ const mapTournament = (t: any): Tournament => {
     title: t.name,
     game: t.gameName,
     image: t.banner || "bg-gradient-to-r from-purple-600 to-indigo-600",
-    status: (t.status === "cancelled" ? "COMPLETED" : t.status.toUpperCase()) as "UPCOMING" | "ONGOING" | "COMPLETED",
+    status: (t.status === "cancelled" ? "CANCELLED" : t.status.toUpperCase()) as "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED",
     mode: t.mode.charAt(0).toUpperCase() + t.mode.slice(1),
     teamSize: t.teamSize,
     regEnd: formatDate(t.registrationEnd),
@@ -213,9 +213,9 @@ export default function TournamentsPageClient() {
         </Button>
       </div>
 
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
         <Tabs value={status} onValueChange={(val) => handleStatusChange(val || "all")}>
-          <TabsList variant="default">
+          <TabsList variant="line">
             <TabsTrigger value="all">All Tournaments</TabsTrigger>
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             <TabsTrigger value="ongoing">Ongoing</TabsTrigger>

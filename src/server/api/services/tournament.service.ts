@@ -102,15 +102,17 @@ export class TournamentService {
   // Queries
   // ---------------------------------------------------------------------------
 
-  static async getAll(filters: {
-    status?: "all" | "upcoming" | "ongoing" | "completed" | "cancelled";
-    search?: string;
-    gameName?: string;
-    mode?: "all" | "solo" | "duo" | "squad";
-    sort?: "latest" | "oldest";
-    page?: number;
-    limit?: number;
-  } = {}) {
+  static async getAll(
+    filters: {
+      status?: "all" | "upcoming" | "ongoing" | "completed" | "cancelled";
+      search?: string;
+      gameName?: string;
+      mode?: "all" | "solo" | "duo" | "squad";
+      sort?: "latest" | "oldest";
+      page?: number;
+      limit?: number;
+    } = {},
+  ) {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 6;
     const offset = (page - 1) * limit;
@@ -137,8 +139,8 @@ export class TournamentService {
       conditions.push(
         or(
           ilike(tournament.name, `%${filters.search}%`),
-          ilike(tournament.gameName, `%${filters.search}%`)
-        )
+          ilike(tournament.gameName, `%${filters.search}%`),
+        ),
       );
     }
 
@@ -181,7 +183,11 @@ export class TournamentService {
       .leftJoin(team, eq(team.tournamentId, tournament.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .groupBy(tournament.id)
-      .orderBy(filters.sort === "oldest" ? asc(tournament.createdAt) : desc(tournament.createdAt))
+      .orderBy(
+        filters.sort === "oldest"
+          ? asc(tournament.createdAt)
+          : desc(tournament.createdAt),
+      )
       .limit(limit)
       .offset(offset);
 
