@@ -383,4 +383,18 @@ export class TeamService {
       .innerJoin(user, eq(teamPlayer.userId, user.id))
       .where(eq(teamPlayer.teamId, teamId));
   }
+
+  static async getMyTeamsByTournamentId(tournamentId: string, userId: string) {
+    return db
+      .select({
+        id: team.id,
+        name: team.name,
+        image: team.image,
+        createdAt: team.createdAt,
+      })
+      .from(team)
+      .where(
+        and(eq(team.tournamentId, tournamentId), eq(team.creatorId, userId)),
+      );
+  }
 }

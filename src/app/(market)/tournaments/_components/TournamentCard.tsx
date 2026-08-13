@@ -3,6 +3,7 @@ import { Button } from "~/components/ui/button"
 import { Badge } from "~/components/ui/badge"
 import { Avatar, AvatarFallback } from "~/components/ui/avatar"
 import type { Tournament } from "./TournamentsPageClient"
+import Link from "next/link"
 
 type TournamentCardProps = {
   tournament: Tournament
@@ -84,9 +85,11 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
         </div>
 
         <div className="mt-auto pt-2">
-          <Button variant="outline" size="sm" className="w-full text-xs">
-            View Details
-          </Button>
+          <Link href={`/tournaments/join/${tournament.id}`} >
+            <Button variant="outline" size="sm" className="w-full text-xs">
+              View Details
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
