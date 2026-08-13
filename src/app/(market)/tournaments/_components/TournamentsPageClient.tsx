@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { cn } from "~/lib/utils"
 import { api } from "~/trpc/react"
 import TournamentCard from "./TournamentCard"
+import { useSidebar } from "~/components/ui/sidebar"
 
 export type Tournament = {
   id: string
@@ -97,15 +98,20 @@ export default function TournamentsPageClient() {
   const [status, setStatus] = useState<"all" | "upcoming" | "ongoing" | "completed" | "cancelled">("all");
   const [sortOrder, setSortOrder] = useState<"latest" | "oldest">("latest");
   const [page, setPage] = useState(1);
+  const [isFilterChanging, setIsFilterChanging] = useState(false);
+  const { isMobile } = useSidebar()
 
   // Debounce search input to avoid querying on every keystroke
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1);
+      if (search !== debouncedSearch) {
+        setDebouncedSearch(search);
+        setPage(1);
+        setIsFilterChanging(true);
+      }
     }, 300);
     return () => clearTimeout(handler);
-  }, [search]);
+  }, [search, debouncedSearch]);
 
   const { data, isLoading, isFetching, isError, refetch } = api.tournament.getAll.useQuery(
     {
@@ -122,9 +128,18 @@ export default function TournamentsPageClient() {
     }
   );
 
+  useEffect(() => {
+    if (!isFetching) {
+      setIsFilterChanging(false);
+    }
+  }, [isFetching]);
+
+  const showFilterLoader = isFilterChanging && isFetching;
+
   const handleStatusChange = (val: string) => {
     setStatus(val as any);
     setPage(1);
+    setIsFilterChanging(true);
   };
 
   const totalPages = data?.totalPages ?? 1;
@@ -185,7 +200,7 @@ export default function TournamentsPageClient() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={selectedGame} onValueChange={(val) => { setSelectedGame(val || "all"); setPage(1); }}>
+        <Select value={selectedGame} onValueChange={(val) => { setSelectedGame(val || "all"); setPage(1); setIsFilterChanging(true); }}>
           <SelectTrigger className="w-35">
             {getGameLabel(selectedGame)}
           </SelectTrigger>
@@ -196,7 +211,7 @@ export default function TournamentsPageClient() {
             <SelectItem value="cod">COD Mobile</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={selectedMode} onValueChange={(val) => { setSelectedMode(val || "all"); setPage(1); }}>
+        <Select value={selectedMode} onValueChange={(val) => { setSelectedMode(val || "all"); setPage(1); setIsFilterChanging(true); }}>
           <SelectTrigger className="w-35">
             {getModeLabel(selectedMode)}
           </SelectTrigger>
@@ -208,13 +223,19 @@ export default function TournamentsPageClient() {
           </SelectContent>
         </Select>
         <Button variant="outline" className="gap-2" onClick={() => refetch()}>
-          <RefreshCw className="size-4" />
+          <RefreshCw className={cn("size-4", isFetching && "animate-spin")} />
           Refresh
         </Button>
+        {showFilterLoader && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground ml-2 animate-pulse">
+            <Spinner className="size-3.5 text-primary" />
+            <span>Updating tournaments...</span>
+          </div>
+        )}
       </div>
 
-      <div className="mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
-        <Tabs value={status} onValueChange={(val) => handleStatusChange(val || "all")}>
+      <div className="mb-6 flex md:flex-row gap-3 items-start md:items-center justify-between">
+        <Tabs value={status} orientation={isMobile ? "vertical" : undefined} onValueChange={(val) => handleStatusChange(val || "all")}>
           <TabsList variant="line">
             <TabsTrigger value="all">All Tournaments</TabsTrigger>
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
@@ -222,7 +243,7 @@ export default function TournamentsPageClient() {
             <TabsTrigger value="completed">Completed</TabsTrigger>
           </TabsList>
         </Tabs>
-        <Select value={sortOrder} onValueChange={(val) => { setSortOrder((val || "latest") as any); setPage(1); }}>
+        <Select value={sortOrder} onValueChange={(val) => { setSortOrder((val || "latest") as any); setPage(1); setIsFilterChanging(true); }}>
           <SelectTrigger className="w-35">
             {getSortLabel(sortOrder)}
           </SelectTrigger>
@@ -261,16 +282,8 @@ export default function TournamentsPageClient() {
           <p className="text-muted-foreground text-sm">No tournaments found matching the filters.</p>
         </div>
       ) : (
-        <div className="relative min-h-[300px]">
-          {isFetching && (
-            <div className="absolute inset-0 flex items-center justify-center z-10 bg-background/10 backdrop-blur-xs rounded-2xl">
-              <div className="flex items-center gap-2 bg-card px-4 py-2.5 rounded-2xl shadow-lg ring-1 ring-foreground/5 border border-foreground/5">
-                <Spinner className="size-4 text-primary" />
-                <span className="text-xs text-muted-foreground font-medium">Loading...</span>
-              </div>
-            </div>
-          )}
-          <div className={cn("grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 transition-opacity duration-200", isFetching && "opacity-40 pointer-events-none")}>
+        <div className="relative min-h-75">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {data?.tournaments.map((t) => (
               <TournamentCard key={t.id} tournament={mapTournament(t)} />
             ))}
@@ -287,7 +300,10 @@ export default function TournamentsPageClient() {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (page > 1) setPage(page - 1);
+                    if (page > 1) {
+                      setPage(page - 1);
+                      setIsFilterChanging(true);
+                    }
                   }}
                   className={page <= 1 ? "pointer-events-none opacity-50" : ""}
                 />
@@ -313,6 +329,7 @@ export default function TournamentsPageClient() {
                       onClick={(e) => {
                         e.preventDefault();
                         setPage(p);
+                        setIsFilterChanging(true);
                       }}
                     >
                       {p}
@@ -326,7 +343,10 @@ export default function TournamentsPageClient() {
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (page < totalPages) setPage(page + 1);
+                    if (page < totalPages) {
+                      setPage(page + 1);
+                      setIsFilterChanging(true);
+                    }
                   }}
                   className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
                 />

@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 
 import Link from "next/link"
 
@@ -38,7 +37,7 @@ export function NavMain({
     }[]
   }[]
 }) {
-  const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
+
 
   return (
     <SidebarGroup>

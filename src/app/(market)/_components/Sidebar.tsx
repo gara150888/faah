@@ -1,6 +1,6 @@
 "use client";
-import React, { Fragment } from "react";
 import Link from "next/link";
+import React, { Fragment } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -10,6 +10,9 @@ import {
   BreadcrumbSeparator,
 } from "~/components/ui/breadcrumb";
 
+import { type User } from "better-auth";
+import { ChevronLeftIcon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar } from "~/components/sidebar/app-sidebar";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
@@ -19,9 +22,8 @@ import {
   SidebarTrigger,
 } from "~/components/ui/sidebar";
 import ToolTipWrapper from "~/components/ui/ToolTipWrapper";
-import { ChevronLeftIcon } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import type { User } from "better-auth";
+
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function Sidebar({
   children,
@@ -34,6 +36,7 @@ export default function Sidebar({
     .split("/")
     .filter((r) => r);
   const router = useRouter();
+  const breadcrumbPath = pathname.filter((segment) => !uuidRegex.test(segment));
 
   return (
     <SidebarProvider>
@@ -48,21 +51,18 @@ export default function Sidebar({
             />
             <Breadcrumb>
               <BreadcrumbList>
-                {pathname.map((r, index) => {
-                  const isLast = index === pathname.length - 1;
-                  const href = "/" + pathname.slice(0, index + 1).join("/");
+                {breadcrumbPath.map((r, index) => {
+                  const isLast = index === breadcrumbPath.length - 1;
+                  const href = "/" + breadcrumbPath.slice(0, index + 1).join("/");
                   return (
-                    <Fragment key={index}>
+                    <Fragment key={r + index}>
                       <BreadcrumbItem>
                         {isLast ? (
                           <BreadcrumbPage className="capitalize">
                             {r.replaceAll("-", " ")}
                           </BreadcrumbPage>
                         ) : (
-                          <BreadcrumbLink
-                            render={<Link prefetch={true} href={href} />}
-                            className="capitalize"
-                          >
+                          <BreadcrumbLink render={<Link prefetch href={href} />} className="capitalize">
                             {r.replaceAll("-", " ")}
                           </BreadcrumbLink>
                         )}
