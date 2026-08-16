@@ -268,3 +268,26 @@ export const teamPlayer = createTable(
     ),
   }),
 );
+
+export const profile = createTable("profile", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, {
+      onDelete: "cascade",
+    }),
+  name: varchar("name", {
+    length: 20,
+  }).notNull(),
+  bio: text("bio").$defaultFn(() => ""),
+  avatar: text("avatar").$defaultFn(() => ""),
+  banner: text("banner").$defaultFn(() => ""),
+  createdAt: timestamp("created_at", {
+    withTimezone: true,
+  })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at", {
+    withTimezone: true,
+  }).$onUpdate(() => new Date()),
+});
