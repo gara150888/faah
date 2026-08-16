@@ -31,6 +31,7 @@ export default function TournamentHero({ tournament }: TournamentHeroProps) {
           <img
             src={tournament.banner}
             alt={tournament.name}
+            loading="lazy"
             className="h-full w-full object-cover"
           />
         ) : (
@@ -80,11 +81,11 @@ export default function TournamentHero({ tournament }: TournamentHeroProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <Users className="size-3.5" />
-            <span>Teams: 32 / {tournament.maxTeams}</span>
+            <span>Teams: {tournament.maxTeams} / 0</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Users className="size-3.5" />
-            <span>Players: 128 / {tournament.maxPlayers}</span>
+            <span>Players: {tournament.maxPlayers} / 0</span>
           </div>
         </div>
       </div>

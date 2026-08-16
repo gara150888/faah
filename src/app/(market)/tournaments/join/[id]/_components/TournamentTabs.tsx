@@ -1,39 +1,50 @@
 "use client";
 
-import { FileText, Info, Trophy, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { FileText, Info, ShieldHalf, Trophy, Users } from "lucide-react";
+import { useSidebar } from "~/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import JoinSection from "./JoinSection";
+import JoinSection from "./join-feature/JoinSection";
+import TeamsSection from "./TeamsSection";
 
 type TournamentTabsProps = {
   tournamentId: string;
   userTeams: { id: string; name: string; image: string | null }[];
   userId: string;
+  teamSize: number;
 };
 
-export default function TournamentTabs({ tournamentId, userTeams, userId }: TournamentTabsProps) {
+type TabItem = {
+  value: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+const TABS: TabItem[] = [
+  { value: "overview", label: "Overview", icon: Info },
+  { value: "details", label: "Details", icon: FileText },
+  { value: "rules", label: "Rules", icon: Trophy },
+  { value: "teams", label: "Teams", icon: ShieldHalf },
+  { value: "join", label: "Join Tournament", icon: Users },
+];
+
+export default function TournamentTabs({
+  tournamentId,
+  teamSize,
+  userTeams: _userTeams,
+  userId: _userId,
+}: TournamentTabsProps) {
+  const { isMobile } = useSidebar();
+
   return (
-    <Tabs defaultValue="overview" className="w-full">
+    <Tabs orientation={isMobile ? "vertical" : undefined} defaultValue="join" className="w-full flex flex-col">
       <TabsList variant="line" className="w-full justify-start">
-        <TabsTrigger value="overview" className="gap-1.5">
-          <Info className="size-3.5" />
-          Overview
-        </TabsTrigger>
-        <TabsTrigger value="details" className="gap-1.5">
-          <FileText className="size-3.5" />
-          Details
-        </TabsTrigger>
-        <TabsTrigger value="rules" className="gap-1.5">
-          <Trophy className="size-3.5" />
-          Rules
-        </TabsTrigger>
-        <TabsTrigger value="prizes" className="gap-1.5">
-          <Trophy className="size-3.5" />
-          Prizes
-        </TabsTrigger>
-        <TabsTrigger value="join" className="gap-1.5">
-          <Users className="size-3.5" />
-          Join Tournament
-        </TabsTrigger>
+        {TABS.map((tab) => (
+          <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
+            <tab.icon className="size-3.5" />
+            {tab.label}
+          </TabsTrigger>
+        ))}
       </TabsList>
 
       <TabsContent value="overview" className="mt-4">
@@ -63,17 +74,12 @@ export default function TournamentTabs({ tournamentId, userTeams, userId }: Tour
         </div>
       </TabsContent>
 
-      <TabsContent value="prizes" className="mt-4">
-        <div className="rounded-2xl bg-card ring-1 ring-foreground/10 p-6">
-          <h3 className="text-lg font-semibold mb-2">Prizes</h3>
-          <p className="text-sm text-muted-foreground">
-            Tournament prizes content goes here.
-          </p>
-        </div>
+      <TabsContent value="teams" className="mt-4">
+        <TeamsSection tournamentId={tournamentId} teamSize={teamSize} />
       </TabsContent>
 
       <TabsContent value="join" className="mt-4">
-        <JoinSection tournamentId={tournamentId} userTeams={userTeams} userId={userId} />
+        <JoinSection tournamentId={tournamentId} teamSize={teamSize} />
       </TabsContent>
     </Tabs>
   );

@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { Spinner } from "~/components/ui/spinner";
 
 type Player = {
   id: string;
@@ -24,6 +23,16 @@ type TeamRosterProps = {
   isLoading?: boolean;
   currentUserId?: string;
 };
+
+const roleBadge = (role: Player['role']) => {
+  return role === "captain" ? <Badge variant="default" className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-400/20 dark:text-purple-300 gap-1">
+    <Crown className="size-3" />
+    Captain
+  </Badge> : <Badge variant="default" className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-400/20 dark:text-purple-300 gap-1">
+    <User className="size-3" />
+    Player
+  </Badge>
+}
 
 export default function TeamRoster({ teamName, players, isLoading, currentUserId }: TeamRosterProps) {
   if (isLoading) {
@@ -82,21 +91,9 @@ export default function TeamRoster({ teamName, players, isLoading, currentUserId
               </AvatarFallback>
             </Avatar>
             <span className="text-sm text-foreground flex-1">{player.name}</span>
-            {player.role === "captain" ? (
-              <Badge variant="default" className="rounded-full bg-purple-100 text-purple-700 dark:bg-purple-400/20 dark:text-purple-300 gap-1">
-                <Crown className="size-3" />
-                Captain
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="rounded-full gap-1">
-                <User className="size-3" />
-                Player
-              </Badge>
-            )}
+            {roleBadge(player.role)}
             {player.id === currentUserId && (
-              <Badge variant="default" className="rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">
-                You
-              </Badge>
+              <Badge variant="default" className="rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-300">You</Badge>
             )}
           </div>
         ))}
