@@ -49,9 +49,7 @@ export class TournamentService {
     }
   }
 
-  private static stripPassword<T extends typeof tournament.$inferSelect>(
-    row: T,
-  ) {
+  private static stripPassword<T extends typeof tournament.$inferSelect>(row: T) {
     const { password, ...rest } = row;
     return {
       ...rest,
@@ -215,9 +213,7 @@ export class TournamentService {
       .where(eq(tournament.id, id))
       .limit(1);
 
-    if (!found) {
-      throw new ServiceError("Tournament not found", "NOT_FOUND");
-    }
+    if (!found) { throw new ServiceError("Tournament not found", "NOT_FOUND"); }
 
     return this.stripPassword(found);
   }
@@ -233,9 +229,7 @@ export class TournamentService {
       .where(eq(tournament.id, id))
       .limit(1);
 
-    if (!existing) {
-      throw new ServiceError("Tournament not found", "NOT_FOUND");
-    }
+    if (!existing) { throw new ServiceError("Tournament not found", "NOT_FOUND"); }
 
     this.ensureOrganizer(existing, organizerId);
 

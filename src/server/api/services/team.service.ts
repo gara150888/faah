@@ -397,4 +397,23 @@ export class TeamService {
         and(eq(team.tournamentId, tournamentId), eq(team.creatorId, userId)),
       );
   }
+
+  static async getTournamentTeamsWithDetails(tournamentId: string) {
+    const result = await db
+      .select({
+        id: team.id,
+        name: team.name,
+        image: team.image,
+        creatorId: team.creatorId,
+        playerCount: count(teamPlayer.id),
+        captainName: user.name,
+      })
+      .from(team)
+      .leftJoin(teamPlayer, eq(teamPlayer.teamId, team.id))
+      .leftJoin(user, eq(user.id, team.creatorId))
+      .where(eq(team.tournamentId, tournamentId))
+      .groupBy(team.id, team.name, team.image, team.creatorId, user.name);
+
+    return result;
+  }
 }

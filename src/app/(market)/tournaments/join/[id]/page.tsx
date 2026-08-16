@@ -11,9 +11,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   const tournament = await api.tournament.getById({ id });
 
-  if (!tournament) {
-    notFound();
-  }
+  if (!tournament) { notFound(); }
 
   const userTeams = session?.user?.id
     ? await api.team.getMyTeamsByTournamentId({ tournamentId: id })
@@ -29,6 +27,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
               tournamentId={id}
               userTeams={userTeams}
               userId={session?.user?.id ?? ""}
+              teamSize={tournament.teamSize}
             />
           </div>
           <div className="w-full lg:w-80 shrink-0">

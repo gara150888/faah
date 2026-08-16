@@ -101,4 +101,10 @@ export const teamRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return TeamService.getMyTeamsByTournamentId(input.tournamentId, ctx.session.user.id);
     }),
+
+  getTournamentTeamsWithDetails: publicProcedure
+    .input(z.object({ tournamentId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      return TeamService.getTournamentTeamsWithDetails(input.tournamentId);
+    }),
 });
